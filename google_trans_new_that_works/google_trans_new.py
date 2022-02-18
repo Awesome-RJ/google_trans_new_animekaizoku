@@ -58,7 +58,7 @@ class google_new_transError(Exception):
 
 
 class google_translator:
-    '''
+    """
     You can use 108 language in target and source,details view LANGUAGES.
     Target language: like 'en'、'zh'、'th'...
 
@@ -85,7 +85,7 @@ class google_translator:
     :param proxies: proxies Will be used for every request.
     :type proxies: class : dict; like: {'http': 'http:171.112.169.47:19934/', 'https': 'https:171.112.169.47:19934/'}
 
-    '''
+    """
 
     def __init__(self, url_suffix="cn", timeout=5, proxies=None):
         self.proxies = proxies
@@ -94,7 +94,7 @@ class google_translator:
         else:
             self.url_suffix = url_suffix
         url_base = "https://translate.google.{}".format(self.url_suffix)
-        self.url = url_base + "/_/TranslateWebserverUi/data/batchexecute"
+        self.url = f'{url_base}/_/TranslateWebserverUi/data/batchexecute'
         self.timeout = timeout
 
     def _package_rpc(self, text, lang_src='auto', lang_tgt='auto'):
@@ -103,10 +103,7 @@ class google_translator:
         escaped_parameter = json.dumps(parameter, separators=(',', ':'))
         rpc = [[[random.choice(GOOGLE_TTS_RPC), escaped_parameter, None, "generic"]]]
         espaced_rpc = json.dumps(rpc, separators=(',', ':'))
-        # text_urldecode = quote(text.strip())
-        freq_initial = "f.req={}&".format(quote(espaced_rpc))
-        freq = freq_initial
-        return freq
+        return "f.req={}&".format(quote(espaced_rpc))
 
     def translate(self, text, lang_tgt='auto', lang_src='auto', pronounce=False):
         try:
@@ -120,7 +117,7 @@ class google_translator:
         text = str(text)
         if len(text) >= 5000:
             return "Warning: Can only detect less than 5000 characters"
-        if len(text) == 0:
+        if not text:
             return ""
         headers = {
             "Referer": "http://translate.google.{}/".format(self.url_suffix),
@@ -137,7 +134,7 @@ class google_translator:
                                     headers=headers,
                                     )
         try:
-            if self.proxies == None or type(self.proxies) != dict:
+            if self.proxies is None or type(self.proxies) != dict:
                 self.proxies = {}
             with requests.Session() as s:
                 s.proxies = self.proxies
@@ -157,50 +154,48 @@ class google_translator:
                         if len(response) == 1:
                             if len(response[0]) > 5:
                                 sentences = response[0][5]
-                            else: ## only url
+                            else:  ## only url
                                 sentences = response[0][0]
-                                if pronounce == False:
+                                if not pronounce:
                                     return sentences
-                                elif pronounce == True:
-                                    return [sentences,None,None]
+                                elif pronounce:
+                                    return [sentences, None, None]
                             translate_text = ""
                             for sentence in sentences:
                                 sentence = sentence[0]
                                 translate_text += sentence.strip() + ' '
                             translate_text = translate_text
-                            if pronounce == False:
+                            if not pronounce:
                                 return translate_text
-                            elif pronounce == True:
-                                pronounce_src = (response_[0][0])
-                                pronounce_tgt = (response_[1][0][0][1])
-                                return [translate_text, pronounce_src, pronounce_tgt]
+                            elif pronounce:
+                                return self._extracted_from_translate_64(response_, translate_text)
                         elif len(response) == 2:
-                            sentences = []
-                            for i in response:
-                                sentences.append(i[0])
-                            if pronounce == False:
+                            sentences = [i[0] for i in response]
+                            if not pronounce:
                                 return sentences
-                            elif pronounce == True:
-                                pronounce_src = (response_[0][0])
-                                pronounce_tgt = (response_[1][0][0][1])
-                                return [sentences, pronounce_src, pronounce_tgt]
+                            elif pronounce:
+                                return self._extracted_from_translate_64(response_, sentences)
                     except Exception as e:
-                        raise e
+                        raise e from e
             r.raise_for_status()
         except requests.exceptions.ConnectTimeout as e:
-            raise e
+            raise e from e
         except requests.exceptions.HTTPError as e:
-            # Request successful, bad response
-            raise google_new_transError(tts=self, response=r)
+            raise google_new_transError(tts=self, response=r) from e
         except requests.exceptions.RequestException as e:
-            # Request failed
-            raise google_new_transError(tts=self)
+            raise google_new_transError(tts=self) from e
 
+    def _extracted_from_translate_64(self, response_, arg1):
+        pronounce_src = response_[0][0]
+        pronounce_tgt = response_[1][0][0][1]
+        return [arg1, pronounce_src, pronounce_tgt]
+
+    # TODO Rename this here and in `translate` and `detect`
     def detect(self, text):
         text = str(text)
         if len(text) >= 5000:
             return log.debug("Warning: Can only detect less than 5000 characters")
-        if len(text) == 0:
+        if not text:
             return ""
         headers = {
             "Referer": "http://translate.google.{}/".format(self.url_suffix),
@@ -216,7 +211,7 @@ class google_translator:
                                     data=freq,
                                     headers=headers)
         try:
-            if self.proxies == None or type(self.proxies) != dict:
+            if self.proxies is None or type(self.proxies) != dict:
                 self.proxies = {}
             with requests.Session() as s:
                 s.proxies = self.proxies
@@ -230,22 +225,20 @@ class google_translator:
                     # regex_str = r"\[\[\"wrb.fr\",\"MkEWBc\",\"\[\[(.*).*?,\[\[\["
                     try:
                         # data_got = re.search(regex_str,decoded_line).group(1)
-                        response = (decoded_line)
+                        response = decoded_line
                         response = json.loads(response)
                         response = list(response)
                         response = json.loads(response[0][2])
                         response = list(response)
                         detect_lang = response[0][2]
-                    except Exception:
-                        raise Exception
+                    except Exception as e:
+                        raise Exception from e
                     # data_got = data_got.split('\\\"]')[0]
                     return [detect_lang, LANGUAGES[detect_lang.lower()]]
             r.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            # Request successful, bad response
             log.debug(str(e))
-            raise google_new_transError(tts=self, response=r)
+            raise google_new_transError(tts=self, response=r) from e
         except requests.exceptions.RequestException as e:
-            # Request failed
             log.debug(str(e))
-            raise google_new_transError(tts=self)
+            raise google_new_transError(tts=self) from e

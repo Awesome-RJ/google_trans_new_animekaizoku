@@ -52,12 +52,14 @@ print(translate_text)
 -> 你好中国
 ```
 ### Multithreading Translate
+
 ```python
-from google_trans_new import google_translator 
+from google_trans_new import google_translator
 from multiprocessing.dummy import Pool as ThreadPool
 import time
 
-pool = ThreadPool(8) # Threads
+pool = ThreadPool(8)  # Threads
+
 
 def request(text):
     lang = "zh"
@@ -65,20 +67,27 @@ def request(text):
     translate_text = t.translate(text.strip(), lang)
     return translate_text
 
-if __name__ == "__main__" :
-    time1 = time.time()
-    with open("./test.txt",'r') as f_p:
-      texts = f_p.readlines()
-      try:
-          results = pool.map(request, texts)
-      except Exception as e:
-          raise e
-      pool.close()
-      pool.join()
 
-      time2 = time.time()
-      print("Translating %s sentences, a total of %s s"%(len(texts),time2 - time1))
--> Translating 720 sentences, a total of 25.89591908454895 s 
+if __name__ == "__main__":
+    time1 = time.time()
+    with open("tests/test.txt", 'r') as f_p:
+        texts = f_p.readlines()
+        try:
+            results = pool.map(request, texts)
+        except Exception as e:
+            raise e
+        pool.close()
+        pool.join()
+
+        time2 = time.time()
+        print("Translating %s sentences, a total of %s s" % (len(texts), time2 - time1))
+-> Translating
+720
+sentences, a
+total
+of
+25.89591908454895
+s 
 ```
 ### Detect
 ```python
